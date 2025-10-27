@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据对比查重工具 - 导出完整唯一行</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 配置Tailwind自定义颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        danger: '#EF4444',
+                        neutral: '#64748B',
+                        dataset1: '#3B82F6',
+                        dataset2: '#10B981',
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .scrollbar-thin {
+                scrollbar-width: thin;
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background-color: rgba(100, 116, 139, 0.5);
+                border-radius: 3px;
+            }
+            .gradient-border {
+                position: relative;
+            }
+            .gradient-border::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, var(--tw-gradient-stops));
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-exchange text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">数据对比查重工具：技术支持QQVX:113575320</h1>
+            </div>
+            <div class="text-sm text-neutral">
+                支持导出完整唯一行数据
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 介绍卡片 -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+            <h2 class="text-lg font-semibold mb-3 text-gray-800">使用说明</h2>
+            <p class="text-gray-600 mb-4">
+                输入两组数据后，可以导出每个数据集中的唯一行（仅在该数据集出现，不在另一数据集出现的完整行），
+                导出内容将保留原始的整行格式。
+            </p>
+            <div class="bg-gray-50 p-4 rounded-md text-sm text-gray-600">
+                <p class="mb-2"><strong>示例格式：</strong></p>
+                <p>email----password----id----otherdata</p>
+                <p>user@example.com----abc123----12345----...</p>
+            </div>
+        </div>
+        
+        <!-- 输入区域和结果区域 -->
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- 数据集1输入 -->
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="bg-dataset1/10 gradient-border from-dataset1 to-dataset1/70 px-6 py-3">
+                    <h2 class="font-semibold text-dataset1 flex items-center">
+                        <i class="fa fa-database mr-2"></i>数据集 A
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-end mb-4">
+                        <button id="clearDataset1" class="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-neutral transition">
+                            <i class="fa fa-trash-o mr-1"></i>清空
+                        </button>
+                    </div>
+                    
+                    <textarea 
+                        id="dataset1Input" 
+                        class="w-full h-64 p-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-dataset1/50 focus:border-dataset1 outline-none resize-none scrollbar-thin"
+                        placeholder="请输入第一组数据，每行一条记录..."></textarea>
+                    
+                    <div class="mt-4 text-sm text-neutral">
+                        <span id="dataset1Count">0 条记录</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 数据集2输入 -->
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="bg-dataset2/10 gradient-border from-dataset2 to-dataset2/70 px-6 py-3">
+                    <h2 class="font-semibold text-dataset2 flex items-center">
+                        <i class="fa fa-database mr-2"></i>数据集 B
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-end mb-4">
+                        <button id="clearDataset2" class="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-neutral transition">
+                            <i class="fa fa-trash-o mr-1"></i>清空
+                        </button>
+                    </div>
+                    
+                    <textarea 
+                        id="dataset2Input" 
+                        class="w-full h-64 p-3 border border-gray-200 rounded-md focus:ring-2 focus:ring-dataset2/50 focus:border-dataset2 outline-none resize-none scrollbar-thin"
+                        placeholder="请输入第二组数据，每行一条记录..."></textarea>
+                    
+                    <div class="mt-4 text-sm text-neutral">
+                        <span id="dataset2Count">0 条记录</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 控制和结果区域 -->
+            <div>
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800">查重设置</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">选择查重字段：</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="field" value="entire" checked class="w-4 h-4 text-primary focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">整行完全匹配</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="field" value="0" class="w-4 h-4 text-primary focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">字段1（邮箱）</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="field" value="1" class="w-4 h-4 text-primary focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">字段2</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="field" value="2" class="w-4 h-4 text-primary focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">字段3</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="field" value="3" class="w-4 h-4 text-primary focus:ring-primary">
+                                <span class="ml-2 text-sm text-gray-700">字段4</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        id="compareBtn" 
+                        class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-md transition transition flex items-center justify-center">
+                        <i class="fa fa-exchange mr-2"></i>对比查重
+                    </button>
+                    
+                    <div class="mt-3 grid grid-cols-2 gap-3">
+                        <button 
+                            id="sampleBtn" 
+                            class="bg-gray-100 hover:bg-gray-200 text-neutral font-medium py-2 px-4 rounded-md transition flex items-center justify-center">
+                            <i class="fa fa-file-text-o mr-2"></i>示例数据
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 导出按钮区域 -->
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800">导出唯一行</h2>
+                    <div class="grid grid-cols-1 gap-3">
+                        <button 
+                            id="exportUniqueABtn" 
+                            class="w-full bg-dataset1 hover:bg-dataset1/90 text-white font-medium py-2 px-4 rounded-md transition flex items-center justify-center opacity-50 cursor-not-allowed"
+                            disabled>
+                            <i class="fa fa-download mr-2"></i>导出数据集A的唯一行
+                        </button>
+                        <button 
+                            id="exportUniqueBBtn" 
+                            class="w-full bg-dataset2 hover:bg-dataset2/90 text-white font-medium py-2 px-4 rounded-md transition flex items-center justify-center opacity-50 cursor-not-allowed"
+                            disabled>
+                            <i class="fa fa-download mr-2"></i>导出数据集B的唯一行
+                        </button>
+                        <button 
+                            id="exportDuplicatesBtn" 
+                            class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-md transition flex items-center justify-center opacity-50 cursor-not-allowed"
+                            disabled>
+                            <i class="fa fa-download mr-2"></i>导出重复行
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 结果统计 -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800">查重结果</h2>
+                        <span id="matchCount" class="text-sm px-2 py-1 bg-primary/10 text-primary rounded-full">
+                            等待对比...
+                        </span>
+                    </div>
+                    
+                    <div id="emptyResultState" class="py-12 text-center">
+                        <i class="fa fa-balance-scale text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500">对比结果将显示在这里</p>
+                    </div>
+                    
+                    <div id="loadingResultState" class="py-12 text-center hidden">
+                        <i class="fa fa-spinner fa-spin text-4xl text-primary mb-3"></i>
+                        <p class="text-gray-500">正在对比数据...</p>
+                    </div>
+                    
+                    <div id="resultsContainer" class="max-h-64 overflow-y-auto scrollbar-thin hidden">
+                        <div id="noMatches" class="py-12 text-center hidden">
+                            <i class="fa fa-check-circle text-4xl text-secondary mb-3"></i>
+                            <p class="text-gray-500">未发现重复项</p>
+                        </div>
+                        
+                        <div id="matchesList" class="space-y-4">
+                            <!-- 匹配项将动态插入这里 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 详细统计 -->
+        <div class="mt-8 grid md:grid-cols-4 gap-6">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center mb-2">
+                    <div class="w-8 h-8 rounded-full bg-dataset1/10 flex items-center justify-center mr-3">
+                        <i class="fa fa-database text-dataset1"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">数据集 A 统计</h3>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm text-neutral mb-1">总记录数</p>
+                    <p id="dataset1Total" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="mt-3">
+                    <p class="text-sm text-neutral mb-1">唯一记录数</p>
+                    <p id="dataset1Unique" class="text-xl font-semibold text-dataset1">0</p>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center mb-2">
+                    <div class="w-8 h-8 rounded-full bg-dataset2/10 flex items-center justify-center mr-3">
+                        <i class="fa fa-database text-dataset2"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">数据集 B 统计</h3>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm text-neutral mb-1">总记录数</p>
+                    <p id="dataset2Total" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="mt-3">
+                    <p class="text-sm text-neutral mb-1">唯一记录数</p>
+                    <p id="dataset2Unique" class="text-xl font-semibold text-dataset2">0</p>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center mb-2">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                        <i class="fa fa-overlap text-primary"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">重复项统计</h3>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm text-neutral mb-1">共同记录数</p>
+                    <p id="commonRecords" class="text-2xl font-bold text-primary">0</p>
+                </div>
+                <div class="mt-3">
+                    <p class="text-sm text-neutral mb-1">A中重复比例</p>
+                    <p id="dataset1MatchRate" class="text-xl font-semibold text-primary">0%</p>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center mb-2">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                        <i class="fa fa-percent text-primary"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">匹配比例</h3>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm text-neutral mb-1">B中重复比例</p>
+                    <p id="dataset2MatchRate" class="text-xl font-semibold text-primary">0%</p>
+                </div>
+                <div class="mt-3">
+                    <p class="text-sm text-neutral mb-1">整体匹配度</p>
+                    <p id="overallMatchRate" class="text-xl font-semibold text-primary">0%</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t mt-12 py-6">
+        <div class="container mx-auto px-4 text-center text-sm text-neutral">
+            <p>数据对比查重工具：技术支持QQVX:113575320 &copy; 2025 - 所有数据仅在浏览器中处理，不会上传到服务器</p>
+        </div>
+    </footer>
+
+    <script>
+        // 存储当前的匹配结果和唯一行数据，用于导出
+        let currentMatches = [];
+        let uniqueRowsA = [];  // 仅在数据集A中出现的行
+        let uniqueRowsB = [];  // 仅在数据集B中出现的行
+        let duplicateRows = []; // 重复出现的行
+        let currentFieldType = 'entire';
+        
+        // DOM元素
+        const dataset1Input = document.getElementById('dataset1Input');
+        const dataset2Input = document.getElementById('dataset2Input');
+        const compareBtn = document.getElementById('compareBtn');
+        const clearDataset1 = document.getElementById('clearDataset1');
+        const clearDataset2 = document.getElementById('clearDataset2');
+        const sampleBtn = document.getElementById('sampleBtn');
+        const exportUniqueABtn = document.getElementById('exportUniqueABtn');
+        const exportUniqueBBtn = document.getElementById('exportUniqueBBtn');
+        const exportDuplicatesBtn = document.getElementById('exportDuplicatesBtn');
+        const dataset1Count = document.getElementById('dataset1Count');
+        const dataset2Count = document.getElementById('dataset2Count');
+        const emptyResultState = document.getElementById('emptyResultState');
+        const loadingResultState = document.getElementById('loadingResultState');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const matchesList = document.getElementById('matchesList');
+        const noMatches = document.getElementById('noMatches');
+        const matchCount = document.getElementById('matchCount');
+        
+        // 统计元素
+        const dataset1Total = document.getElementById('dataset1Total');
+        const dataset1Unique = document.getElementById('dataset1Unique');
+        const dataset2Total = document.getElementById('dataset2Total');
+        const dataset2Unique = document.getElementById('dataset2Unique');
+        const commonRecords = document.getElementById('commonRecords');
+        const dataset1MatchRate = document.getElementById('dataset1MatchRate');
+        const dataset2MatchRate = document.getElementById('dataset2MatchRate');
+        const overallMatchRate = document.getElementById('overallMatchRate');
+        
+        // 示例数据
+        const sampleDataset1 = `ChristineButler3046@hotmail.com----y86JPQdn----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C501_BAY...
+JohnDoe123@example.com----pass123----id123----data1
+JaneSmith456@example.com----pass456----id456----data2
+RobertJohnson789@example.com----pass789----id789----data3
+MichaelBrown321@example.com----pass321----id321----data4`;
+
+        const sampleDataset2 = `CourtneyRomero3718@hotmail.com----h0J4vsRJjE3Y----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C504_BAY...
+JohnDoe123@example.com----differentpass----anotherid----somedata
+JaneSmith456@example.com----pass456----id456----data2
+WilliamTaylor654@example.com----pass654----id654----data5
+DavidAnderson987@example.com----pass987----id987----data6`;
+        
+        // 事件监听
+        compareBtn.addEventListener('click', compareDatasets);
+        clearDataset1.addEventListener('click', () => {
+            dataset1Input.value = '';
+            updateRecordCount(dataset1Input, dataset1Count);
+            resetResults();
+        });
+        clearDataset2.addEventListener('click', () => {
+            dataset2Input.value = '';
+            updateRecordCount(dataset2Input, dataset2Count);
+            resetResults();
+        });
+        sampleBtn.addEventListener('click', loadSampleData);
+        exportUniqueABtn.addEventListener('click', () => exportUniqueRows(uniqueRowsA, 'A'));
+        exportUniqueBBtn.addEventListener('click', () => exportUniqueRows(uniqueRowsB, 'B'));
+        exportDuplicatesBtn.addEventListener('click', exportDuplicateRows);
+        dataset1Input.addEventListener('input', () => updateRecordCount(dataset1Input, dataset1Count));
+        dataset2Input.addEventListener('input', () => updateRecordCount(dataset2Input, dataset2Count));
+        
+        // 重置结果
+        function resetResults() {
+            currentMatches = [];
+            uniqueRowsA = [];
+            uniqueRowsB = [];
+            duplicateRows = [];
+            
+            // 禁用导出按钮
+            exportUniqueABtn.disabled = true;
+            exportUniqueBBtn.disabled = true;
+            exportDuplicatesBtn.disabled = true;
+            exportUniqueABtn.classList.add('opacity-50', 'cursor-not-allowed');
+            exportUniqueBBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            exportDuplicatesBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // 重置UI
+            emptyResultState.classList.remove('hidden');
+            loadingResultState.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            matchCount.textContent = '等待对比...';
+            
+            // 重置统计
+            dataset1Total.textContent = '0';
+            dataset1Unique.textContent = '0';
+            dataset2Total.textContent = '0';
+            dataset2Unique.textContent = '0';
+            commonRecords.textContent = '0';
+            dataset1MatchRate.textContent = '0%';
+            dataset2MatchRate.textContent = '0%';
+            overallMatchRate.textContent = '0%';
+        }
+        
+        // 更新记录计数
+        function updateRecordCount(textarea, counterElement) {
+            const lines = textarea.value.trim().split('\n').filter(line => line.trim() !== '');
+            counterElement.textContent = `${lines.length} 条记录`;
+        }
+        
+        // 加载示例数据
+        function loadSampleData() {
+            dataset1Input.value = sampleDataset1;
+            dataset2Input.value = sampleDataset2;
+            updateRecordCount(dataset1Input, dataset1Count);
+            updateRecordCount(dataset2Input, dataset2Count);
+            resetResults();
+        }
+        
+        // 对比数据集
+        function compareDatasets() {
+            // 获取输入数据
+            const dataset1 = dataset1Input.value.trim();
+            const dataset2 = dataset2Input.value.trim();
+            
+            if (!dataset1 || !dataset2) {
+                alert('请输入两组数据后再进行对比');
+                return;
+            }
+            
+            // 显示加载状态
+            showLoadingState();
+            
+            // 短暂延迟，模拟处理过程
+            setTimeout(() => {
+                // 分割数据行
+                const lines1 = dataset1.split('\n').filter(line => line.trim() !== '');
+                const lines2 = dataset2.split('\n').filter(line => line.trim() !== '');
+                
+                // 获取选中的字段
+                const fieldValue = document.querySelector('input[name="field"]:checked').value;
+                currentFieldType = fieldValue;
+                const checkEntireLine = fieldValue === 'entire';
+                const fieldIndex = checkEntireLine ? null : parseInt(fieldValue, 10);
+                
+                // 处理数据集1，创建键到行的映射（包含所有行）
+                const dataset1Map = createDatasetMap(lines1, checkEntireLine, fieldIndex);
+                const dataset2Map = createDatasetMap(lines2, checkEntireLine, fieldIndex);
+                
+                // 找出共同的键（重复项）和唯一键
+                const { commonKeys, uniqueKeysA, uniqueKeysB } = findKeys(dataset1Map, dataset2Map);
+                
+                // 提取唯一行和重复行（保留原始完整行）
+                uniqueRowsA = extractUniqueRows(lines1, dataset1Map, uniqueKeysA, checkEntireLine, fieldIndex);
+                uniqueRowsB = extractUniqueRows(lines2, dataset2Map, uniqueKeysB, checkEntireLine, fieldIndex);
+                duplicateRows = extractDuplicateRows(lines1, lines2, dataset1Map, dataset2Map, commonKeys);
+                
+                // 生成匹配结果
+                const matches = generateMatches(commonKeys, dataset1Map, dataset2Map, lines1, lines2);
+                currentMatches = matches;
+                
+                // 更新统计信息
+                updateStatistics(
+                    lines1.length, lines2.length, 
+                    dataset1Map.size, dataset2Map.size, 
+                    matches.length,
+                    uniqueRowsA.length,
+                    uniqueRowsB.length
+                );
+                
+                // 显示结果
+                displayMatches(matches, checkEntireLine, fieldIndex);
+                
+                // 更新匹配计数
+                matchCount.textContent = `${matches.length} 个重复项`;
+                
+                // 启用导出按钮
+                exportUniqueABtn.disabled = false;
+                exportUniqueBBtn.disabled = false;
+                exportDuplicatesBtn.disabled = false;
+                exportUniqueABtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                exportUniqueBBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                exportDuplicatesBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }, 800);
+        }
+        
+        // 创建数据集映射（键到行信息的映射）
+        function createDatasetMap(lines, checkEntireLine, fieldIndex) {
+            const map = new Map();
+            
+            lines.forEach((line, index) => {
+                const lineNumber = index + 1; // 行号从1开始
+                let key;
+                
+                if (checkEntireLine) {
+                    key = line;
+                } else {
+                    const fields = line.split('----');
+                    if (fieldIndex < fields.length) {
+                        key = fields[fieldIndex];
+                    } else {
+                        return; // 跳过字段不足的行
+                    }
+                }
+                
+                if (!map.has(key)) {
+                    map.set(key, {
+                        lines: [],
+                        lineNumbers: []
+                    });
+                }
+                map.get(key).lines.push(line);
+                map.get(key).lineNumbers.push(lineNumber);
+            });
+            
+            return map;
+        }
+        
+        // 找出共同键和唯一键
+        function findKeys(map1, map2) {
+            const commonKeys = [];
+            const uniqueKeysA = [];
+            const uniqueKeysB = [];
+            
+            // 找出共同键和A的唯一键
+            for (const key of map1.keys()) {
+                if (map2.has(key)) {
+                    commonKeys.push(key);
+                } else {
+                    uniqueKeysA.push(key);
+                }
+            }
+            
+            // 找出B的唯一键
+            for (const key of map2.keys()) {
+                if (!map1.has(key)) {
+                    uniqueKeysB.push(key);
+                }
+            }
+            
+            return { commonKeys, uniqueKeysA, uniqueKeysB };
+        }
+        
+        // 提取唯一行（保留原始完整行）
+        function extractUniqueRows(lines, datasetMap, uniqueKeys, checkEntireLine, fieldIndex) {
+            const uniqueRows = [];
+            
+            // 收集所有唯一键对应的行
+            uniqueKeys.forEach(key => {
+                if (datasetMap.has(key)) {
+                    uniqueRows.push(...datasetMap.get(key).lines);
+                }
+            });
+            
+            return uniqueRows;
+        }
+        
+        // 提取重复行
+        function extractDuplicateRows(lines1, lines2, map1, map2, commonKeys) {
+            const duplicates = [];
+            
+            commonKeys.forEach(key => {
+                if (map1.has(key) && map2.has(key)) {
+                    duplicates.push({
+                        key,
+                        dataset1: map1.get(key).lines,
+                        dataset2: map2.get(key).lines
+                    });
+                }
+            });
+            
+            return duplicates;
+        }
+        
+        // 生成匹配结果
+        function generateMatches(commonKeys, map1, map2, lines1, lines2) {
+            return commonKeys.map(key => ({
+                key,
+                dataset1Lines: map1.get(key).lineNumbers,
+                dataset2Lines: map2.get(key).lineNumbers,
+                dataset1Examples: map1.get(key).lines,
+                dataset2Examples: map2.get(key).lines
+            }));
+        }
+        
+        // 显示匹配结果
+        function displayMatches(matches, checkEntireLine, fieldIndex) {
+            // 清空之前的结果
+            matchesList.innerHTML = '';
+            
+            // 隐藏加载状态，显示结果容器
+            loadingResultState.classList.add('hidden');
+            emptyResultState.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+            
+            if (matches.length === 0) {
+                // 没有匹配项
+                noMatches.classList.remove('hidden');
+                matchesList.classList.add('hidden');
+            } else {
+                // 有匹配项
+                noMatches.classList.add('hidden');
+                matchesList.classList.remove('hidden');
+                
+                // 创建匹配项卡片
+                matches.forEach((match, index) => {
+                    const isOdd = index % 2 === 0;
+                    const card = document.createElement('div');
+                    card.className = `border rounded-lg overflow-hidden ${isOdd ? 'border-gray-200' : 'border-primary/20 bg-primary/5'}`;
+                    
+                    // 卡片标题
+                    const header = document.createElement('div');
+                    header.className = 'bg-gray-50 px-4 py-2 border-b';
+                    header.innerHTML = `
+                        <div class="font-medium text-gray-800 mb-1">重复值:</div>
+                        <div class="text-sm font-mono truncate max-w-full">${escapeHtml(match.key)}</div>
+                    `;
+                    
+                    // 卡片内容
+                    const content = document.createElement('div');
+                    content.className = 'p-4';
+                    
+                    // 数据集1的匹配行
+                    const dataset1Section = document.createElement('div');
+                    dataset1Section.className = 'mb-4';
+                    
+                    const dataset1Header = document.createElement('div');
+                    dataset1Header.className = 'text-sm font-medium text-dataset1 mb-2';
+                    dataset1Header.textContent = `数据集 A 中出现 ${match.dataset1Lines.length} 次：`;
+                    
+                    const dataset1LinesList = document.createElement('ul');
+                    dataset1LinesList.className = 'space-y-2 text-xs';
+                    
+                    match.dataset1Lines.forEach((lineNum, i) => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <div class="text-neutral">行 ${lineNum}:</div>
+                            <div class="bg-gray-50 p-2 rounded font-mono overflow-x-auto scrollbar-thin text-gray-700">
+                                ${escapeHtml(match.dataset1Examples[i])}
+                            </div>
+                        `;
+                        dataset1LinesList.appendChild(listItem);
+                    });
+                    
+                    dataset1Section.appendChild(dataset1Header);
+                    dataset1Section.appendChild(dataset1LinesList);
+                    
+                    // 数据集2的匹配行
+                    const dataset2Section = document.createElement('div');
+                    
+                    const dataset2Header = document.createElement('div');
+                    dataset2Header.className = 'text-sm font-medium text-dataset2 mb-2';
+                    dataset2Header.textContent = `数据集 B 中出现 ${match.dataset2Lines.length} 次：`;
+                    
+                    const dataset2LinesList = document.createElement('ul');
+                    dataset2LinesList.className = 'space-y-2 text-xs';
+                    
+                    match.dataset2Lines.forEach((lineNum, i) => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <div class="text-neutral">行 ${lineNum}:</div>
+                            <div class="bg-gray-50 p-2 rounded font-mono overflow-x-auto scrollbar-thin text-gray-700">
+                                ${escapeHtml(match.dataset2Examples[i])}
+                            </div>
+                        `;
+                        dataset2LinesList.appendChild(listItem);
+                    });
+                    
+                    dataset2Section.appendChild(dataset2Header);
+                    dataset2Section.appendChild(dataset2LinesList);
+                    
+                    content.appendChild(dataset1Section);
+                    content.appendChild(dataset2Section);
+                    card.appendChild(header);
+                    card.appendChild(content);
+                    matchesList.appendChild(card);
+                });
+            }
+        }
+        
+        // 更新统计信息
+        function updateStatistics(total1, total2, unique1, unique2, matches, uniqueRowsAcount, uniqueRowsBcount) {
+            dataset1Total.textContent = total1;
+            dataset1Unique.textContent = uniqueRowsAcount;
+            dataset2Total.textContent = total2;
+            dataset2Unique.textContent = uniqueRowsBcount;
+            commonRecords.textContent = matches;
+            
+            // 计算匹配比例
+            const rate1 = total1 > 0 ? Math.round((matches / total1) * 100) : 0;
+            const rate2 = total2 > 0 ? Math.round((matches / total2) * 100) : 0;
+            const overallRate = (total1 + total2) > 0 ? Math.round((matches * 2 / (total1 + total2)) * 100) : 0;
+            
+            dataset1MatchRate.textContent = `${rate1}%`;
+            dataset2MatchRate.textContent = `${rate2}%`;
+            overallMatchRate.textContent = `${overallRate}%`;
+        }
+        
+        // 导出唯一行
+        function exportUniqueRows(rows, datasetName) {
+            if (rows.length === 0) {
+                alert(`数据集${datasetName}没有唯一行可导出`);
+                return;
+            }
+            
+            // 获取当前日期时间作为文件名一部分
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+            const fileName = `数据集${datasetName}_唯一行_${dateStr}_${timeStr}.txt`;
+            
+            // 构建导出内容（保留原始行格式）
+            let content = `数据集${datasetName}的唯一行 - 生成时间: ${now.toLocaleString()}\n`;
+            content += `总条数: ${rows.length}\n\n`;
+            content += rows.join('\n'); // 每行一条记录，保留原始格式
+            
+            // 创建Blob并下载
+            downloadFile(content, fileName);
+        }
+        
+        // 导出重复行
+        function exportDuplicateRows() {
+            if (duplicateRows.length === 0) {
+                alert('没有重复行可导出');
+                return;
+            }
+            
+            // 获取当前日期时间作为文件名一部分
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+            const fileName = `重复行_${dateStr}_${timeStr}.txt`;
+            
+            // 构建导出内容
+            let content = `重复行记录 - 生成时间: ${now.toLocaleString()}\n`;
+            content += `总重复值数量: ${duplicateRows.length}\n\n`;
+            
+            duplicateRows.forEach((duplicate, index) => {
+                content += `===== 重复值 ${index + 1}: ${duplicate.key} =====\n`;
+                content += `数据集A中的记录 (${duplicate.dataset1.length}条):\n`;
+                duplicate.dataset1.forEach(line => {
+                    content += `${line}\n`;
+                });
+                
+                content += `\n数据集B中的记录 (${duplicate.dataset2.length}条):\n`;
+                duplicate.dataset2.forEach(line => {
+                    content += `${line}\n`;
+                });
+                content += `\n----------------------------------------\n\n`;
+            });
+            
+            // 创建Blob并下载
+            downloadFile(content, fileName);
+        }
+        
+        // 下载文件通用函数
+        function downloadFile(content, fileName) {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            
+            // 创建下载链接
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            
+            // 触发下载
+            document.body.appendChild(a);
+            a.click();
+            
+            // 清理
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 0);
+        }
+        
+        // 显示加载状态
+        function showLoadingState() {
+            emptyResultState.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            loadingResultState.classList.remove('hidden');
+            matchCount.textContent = '对比中...';
+        }
+        
+        // HTML转义函数，防止XSS
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
